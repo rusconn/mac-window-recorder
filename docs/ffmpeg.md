@@ -52,7 +52,7 @@ Homebrew ffmpeg から抽出する方式を採用した。
 ### ベンダリング手順
 
 ```sh
-./scripts/vendor-ffmpeg.sh
+./scripts/vendor-ffmpeg.py
 ```
 
 スクリプトは Homebrew ffmpeg の dylib 依存を再帰的に探索し、`vendor/ffmpeg/lib/` にコピーする。
