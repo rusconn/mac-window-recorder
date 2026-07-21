@@ -23,6 +23,17 @@ let package = Package(
     platforms: [.macOS(.v15)],
     targets: [
         .executableTarget(
+            name: "smooth-window",
+            path: "Sources/SmoothWindow",
+            swiftSettings: [
+                .swiftLanguageMode(.v5),
+            ],
+            linkerSettings: [
+                .linkedFramework("AppKit"),
+                .linkedFramework("QuartzCore"),
+            ]
+        ),
+        .executableTarget(
             name: "window-recorder",
             dependencies: ["CFFmpeg"],
             path: "Sources/WindowRecorder",
