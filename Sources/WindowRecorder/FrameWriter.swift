@@ -133,6 +133,10 @@ final class FrameWriter: NSObject, SCStreamOutput, SCStreamDelegate {
         let hasAudio = sysAudioInput != nil || micAudioInput != nil
         if hasAudio && !hasStartedSession { return }
 
+        if !hasStartedSession {
+            startSessionIfNeeded(at: frame.pts)
+        }
+
         if !firstVideoPTS.isValid {
             firstVideoPTS = frame.pts
         } else if lastVideoPresentationTime.isValid
