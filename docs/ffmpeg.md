@@ -58,6 +58,17 @@ Homebrew ffmpeg から抽出する方式を採用した。
 スクリプトは Homebrew ffmpeg の dylib 依存を再帰的に探索し、`vendor/ffmpeg/lib/` にコピーする。
 各 dylib の install_name は `@rpath/<filename>` に書き換えられる。
 
+## クロマ補間の品質
+
+BGRA→YUV420P変換時、クロマ平面を2x縮小する補間アルゴリズムが境界線の変色に影響する。
+
+| アルゴリズム | 品質 | 備考 |
+|---|---|---|
+| SWS_BILINEAR | 低 | ブロック境界でクロマが不連続になりやすい |
+| **SWS_LANCZOS** | 高 | 窓関数による高品質補間、境界変色を軽減 |
+
+現状 `SWS_LANCZOS` を使用。sws_scale内部でクロマ平面に対してランクス補間が適用され、境界近傍のピクセルを広範囲から参照することでクロマ値の連続性が改善される。
+
 ## ライセンス
 
 同梱する ffmpeg の動的ライブラリは GPL 2+ である。詳細は `THIRD-PARTY-LICENSES.md` を参照。

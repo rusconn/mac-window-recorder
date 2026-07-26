@@ -260,7 +260,7 @@ final class FFmpegEncoder {
         swsContext = sws_getContext(
             width, height, AV_PIX_FMT_BGRA,
             width, height, AV_PIX_FMT_YUV420P,
-            Int32(SWS_BILINEAR.rawValue), nil, nil, nil
+            Int32(SWS_LANCZOS.rawValue), nil, nil, nil
         )
         guard let swsContext else {
             print("[FFmpegEncoder] sws_getContext失敗")
