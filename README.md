@@ -39,7 +39,7 @@ window-recorder
 Or fully non-interactive:
 
 ```sh
-window-recorder --window Safari --output out.mp4 --codec h264 --no-system-audio --no-microphone
+window-recorder --window Safari --codec h264 --no-system-audio --no-microphone --output out.mp4 
 ```
 
 ### Options
@@ -50,7 +50,7 @@ window-recorder --window Safari --output out.mp4 --codec h264 --no-system-audio 
 | `--output <file>` | Output filename |
 | `--codec <h264\|hevc>` | Select codec |
 | `--crop <T:B:L:R>` | Crop pixels from top, bottom, left, right |
-| `--ffmpeg` | Use software encoding (libx264/libx265) instead of hardware |
+| `--ffmpeg <preset>` | Use software encoding (libx264/libx265). Preset: ultrafast/superfast/veryfast/faster/fast/medium/slow/slower/veryslow |
 | `--system-audio` | Capture system audio |
 | `--microphone <name>` | Select microphone by name |
 | `--no-system-audio` | Disable system audio |

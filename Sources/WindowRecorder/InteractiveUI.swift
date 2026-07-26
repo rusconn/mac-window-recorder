@@ -36,7 +36,6 @@ struct InteractiveUI {
         config.microphoneDeviceID = mic.uniqueID
         config.microphoneName = mic.localizedName
         config.codec = selectCodec(preset: parsed.codec)
-        config.outputName = selectOutputName(preset: parsed.outputName)
 
         if let top = parsed.cropTop, let bottom = parsed.cropBottom,
            let left = parsed.cropLeft, let right = parsed.cropRight {
@@ -50,6 +49,8 @@ struct InteractiveUI {
         if parsed.debug == true {
             config.debug = true
         }
+
+        config.outputName = selectOutputName(preset: parsed.outputName)
 
         return config
     }

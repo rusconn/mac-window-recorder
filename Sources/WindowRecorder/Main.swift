@@ -33,22 +33,22 @@ struct Main {
 
             オプション:
               --window <title>          ウィンドウを選択（対話をスキップ）
-              --output <file>           出力ファイル名を指定（対話をスキップ）
-              --codec <h264|hevc>       コーデックを選択（対話をスキップ）
-              --crop <T:B:L:R>          上下左右のクロップピクセル数
-              --microphone <name>       マイクを選択（対話をスキップ）
-              --no-microphone           マイクなしを選択（対話をスキップ）
               --system-audio            システム音声を収録（対話をスキップ）
               --no-system-audio         システム音声なし（対話をスキップ）
-              --ffmpeg <preset>          ffmpegを使用（preset: ultrafast/superfast/veryfast/faster/fast/medium/slow/slower/veryslow）
+              --microphone <name>       マイクを選択（対話をスキップ）
+              --no-microphone           マイクなしを選択（対話をスキップ）
+              --codec <h264|hevc>       コーデックを選択（対話をスキップ）
+              --crop <T:B:L:R>          上下左右のクロップピクセル数
+              --ffmpeg <preset>         ffmpegを使用（preset: ultrafast/superfast/veryfast/faster/fast/medium/slow/slower/veryslow）
               --debug                   ffmpeg/libx264/libx265の詳細ログを表示
+              --output <file>           出力ファイル名を指定（対話をスキップ）
               -h, --help                このメッセージを表示
 
             例:
               window-recorder                                        全て対話
               window-recorder --window Safari --no-system-audio       ウィンドウと音声をプリセット
-              window-recorder --window Safari --output out.mp4 \\
-                  --codec h264 --no-system-audio --no-microphone     全プリセット（対話なし）
+              window-recorder --window Safari --codec h264 \\
+                  --no-system-audio --no-microphone --output out.mp4    全プリセット（対話なし）
             """)
             exit(0)
         }
