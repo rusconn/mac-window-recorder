@@ -52,6 +52,12 @@ static inline void swift_sws_set_bt709(SwsContext *ctx) {
     sws_setColorspaceDetails(ctx, coeff, 1, coeff, 0, 0, 1 << 16, 1 << 16);
 }
 
+// chromaLoc: 0=cosited(左寄せ/JPEG), 1=中心(MPEG2)
+static inline void swift_sws_set_chroma_loc(SwsContext *ctx, int chromaLoc) {
+    ctx->src_h_chr_pos = chromaLoc;
+    ctx->src_v_chr_pos = chromaLoc;
+}
+
 static void swift_av_log_null(void *avcl, int level, const char *fmt, va_list vl) {
     (void)avcl; (void)level; (void)fmt; (void)vl;
 }

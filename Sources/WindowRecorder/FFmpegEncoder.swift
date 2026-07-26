@@ -214,14 +214,18 @@ final class FFmpegEncoder {
         av_opt_set(codecContext.pointee.priv_data, "crf", "\(crf)", 0)
         av_opt_set(codecContext.pointee.priv_data, "g", "120", 0)
         if codec == "libx264" && !debug {
-            av_opt_set(codecContext.pointee.priv_data, "x264-params", "log=-1", 0)
+            av_opt_set(codecContext.pointee.priv_data, "x264-params", "log=-1:chroma-loc=1", 0)
+        }
+        if codec == "libx264" && debug {
+            av_opt_set(codecContext.pointee.priv_data, "x264-params", "chroma-loc=1", 0)
         }
         if codec == "libx265" && !debug {
             av_opt_set(codecContext.pointee.priv_data, "tag", "hvc1", 0)
-            av_opt_set(codecContext.pointee.priv_data, "x265-params", "log-level=none", 0)
+            av_opt_set(codecContext.pointee.priv_data, "x265-params", "log-level=none:chroma-sample-loc=1", 0)
         }
         if codec == "libx265" && debug {
             av_opt_set(codecContext.pointee.priv_data, "tag", "hvc1", 0)
+            av_opt_set(codecContext.pointee.priv_data, "x265-params", "chroma-sample-loc=1", 0)
         }
 
         if formatContext.pointee.oformat.pointee.flags & AVFMT_GLOBALHEADER != 0 {
@@ -234,6 +238,7 @@ final class FFmpegEncoder {
         }
 
         avcodec_parameters_from_context(stream.pointee.codecpar, codecContext)
+        stream.pointee.codecpar.pointee.chroma_location = AVCHROMA_LOC_LEFT
         stream.pointee.time_base = codecContext.pointee.time_base
 
         bgraFrame = av_frame_alloc()
@@ -262,6 +267,7 @@ final class FFmpegEncoder {
             return false
         }
         swift_sws_set_bt709(swsContext)
+        swift_sws_set_chroma_loc(swsContext, 0) // 0=cosited
 
         packet = av_packet_alloc()
         guard packet != nil else { return false }
