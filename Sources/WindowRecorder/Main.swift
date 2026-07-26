@@ -40,7 +40,7 @@ struct Main {
               --no-microphone           マイクなしを選択（対話をスキップ）
               --system-audio            システム音声を収録（対話をスキップ）
               --no-system-audio         システム音声なし（対話をスキップ）
-              --ffmpeg                  ffmpegを使用したエンコード
+              --ffmpeg <preset>          ffmpegを使用（preset: ultrafast/superfast/veryfast/faster/fast/medium/slow/slower/veryslow）
               --debug                   ffmpeg/libx264/libx265の詳細ログを表示
               -h, --help                このメッセージを表示
 

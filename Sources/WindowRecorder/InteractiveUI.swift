@@ -46,9 +46,7 @@ struct InteractiveUI {
             config.cropRight = right
         }
 
-        if parsed.hasFfmpeg {
-            config.ffmpeg = true
-        }
+        config.ffmpegPreset = parsed.ffmpegPreset
         if parsed.debug == true {
             config.debug = true
         }

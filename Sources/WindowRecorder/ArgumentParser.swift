@@ -28,7 +28,7 @@ struct ParsedArguments {
     var microphoneQuery: String?
     var noMicrophone: Bool?
     var systemAudio: Bool?
-    var ffmpeg: Bool?
+    var ffmpegPreset: String?
     var debug: Bool?
 
     var hasWindow: Bool { windowQuery != nil }
@@ -39,7 +39,7 @@ struct ParsedArguments {
     var hasNoMicrophone: Bool { noMicrophone == true }
     var hasSystemAudio: Bool { systemAudio == true }
     var hasNoSystemAudio: Bool { systemAudio == false }
-    var hasFfmpeg: Bool { ffmpeg == true }
+    var hasFfmpeg: Bool { ffmpegPreset != nil }
 }
 
 struct ArgumentParser {
@@ -104,9 +104,14 @@ struct ArgumentParser {
                 }
                 parsed.systemAudio = false
                 i += 1
-            case "--ffmpeg":
-                parsed.ffmpeg = true
-                i += 1
+            case "--ffmpeg" where i + 1 < args.count:
+                let preset = args[i + 1]
+                guard Self.isValidPreset(preset) else {
+                    print("エラー: --ffmpeg の preset は ultrafast/superfast/veryfast/faster/fast/medium/slow/slower/veryslow を指定してください。")
+                    exit(1)
+                }
+                parsed.ffmpegPreset = preset
+                i += 2
             case "--debug":
                 parsed.debug = true
                 i += 1
@@ -120,6 +125,15 @@ struct ArgumentParser {
         }
 
         return parsed
+    }
+
+    static let validPresets = [
+        "ultrafast", "superfast", "veryfast", "faster", "fast",
+        "medium", "slow", "slower", "veryslow"
+    ]
+
+    static func isValidPreset(_ value: String) -> Bool {
+        validPresets.contains(value.lowercased())
     }
 
     private static func parseCodec(_ value: String) -> AVVideoCodecType? {

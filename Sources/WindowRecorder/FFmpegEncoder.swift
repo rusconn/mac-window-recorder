@@ -168,19 +168,19 @@ final class FFmpegEncoder {
         return true
     }
 
-    init?(width: Int, height: Int, codec: String, crf: Int, outputURL: URL, debug: Bool = false) {
+    init?(width: Int, height: Int, codec: String, crf: Int, preset: String, outputURL: URL, debug: Bool = false) {
         self.width = Int32(width)
         self.height = Int32(height)
         self.outputURL = outputURL
         self.debug = debug
 
         let savedFd = debug ? -1 : swift_suppress_stderr()
-        let ok = setupEncoder(codec: codec, crf: crf)
+        let ok = setupEncoder(codec: codec, crf: crf, preset: preset)
         if savedFd >= 0 { swift_restore_stderr(savedFd) }
         guard ok else { return nil }
     }
 
-    private func setupEncoder(codec: String, crf: Int) -> Bool {
+    private func setupEncoder(codec: String, crf: Int, preset: String) -> Bool {
         let ret = avformat_alloc_output_context2(&formatContext, nil, nil, outputURL.path)
         guard ret >= 0, let formatContext else {
             print("[FFmpegEncoder] 出力コンテキスト作成失敗: ret=\(ret)")
@@ -210,7 +210,7 @@ final class FFmpegEncoder {
         codecContext.pointee.color_trc = AVCOL_TRC_BT709
         codecContext.pointee.color_range = AVCOL_RANGE_MPEG
 
-        av_opt_set(codecContext.pointee.priv_data, "preset", "veryfast", 0)
+        av_opt_set(codecContext.pointee.priv_data, "preset", preset, 0)
         av_opt_set(codecContext.pointee.priv_data, "crf", "\(crf)", 0)
         av_opt_set(codecContext.pointee.priv_data, "g", "120", 0)
         if codec == "libx264" && !debug {

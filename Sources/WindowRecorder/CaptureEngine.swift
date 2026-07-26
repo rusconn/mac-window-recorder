@@ -72,7 +72,7 @@ struct CaptureEngine {
         var sysAudioInput: AVAssetWriterInput?
         var micAudioInput: AVAssetWriterInput?
 
-        if config.ffmpeg {
+        if let preset = config.ffmpegPreset {
             let outputURL = URL(fileURLWithPath: config.outputName)
             if FileManager.default.fileExists(atPath: config.outputName) {
                 try FileManager.default.removeItem(at: outputURL)
@@ -84,6 +84,7 @@ struct CaptureEngine {
                 height: dims.videoHeight,
                 codec: codecName,
                 crf: crf,
+                preset: preset,
                 outputURL: outputURL,
                 debug: config.debug
             )
@@ -172,7 +173,7 @@ struct CaptureEngine {
             await assetWriter.finishWriting()
         }
 
-        if config.ffmpeg {
+        if config.ffmpegPreset != nil {
             let audioPath = config.outputName + ".audio.m4a"
             if FileManager.default.fileExists(atPath: audioPath) {
                 let outputURL = URL(fileURLWithPath: config.outputName)

@@ -28,7 +28,7 @@ struct CaptureConfig {
     var microphoneDeviceID: String?
     var microphoneName: String?
     var captureSystemAudio: Bool = true
-    var ffmpeg: Bool = false
+    var ffmpegPreset: String?
     var debug: Bool = false
 
     var hasCrop: Bool {
@@ -45,8 +45,8 @@ struct CaptureConfig {
         if hasCrop {
             lines.append("クロップ: \(cropTop):\(cropBottom):\(cropLeft):\(cropRight)")
         }
-        if ffmpeg {
-            lines.append("エンコード: ffmpeg (libx264/libx265)")
+        if let preset = ffmpegPreset {
+            lines.append("エンコード: ffmpeg (preset=\(preset))")
         }
         return lines.joined(separator: "\n  ")
     }
