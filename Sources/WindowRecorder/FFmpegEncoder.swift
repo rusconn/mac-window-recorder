@@ -257,17 +257,21 @@ final class FFmpegEncoder {
             return false
         }
 
+        let swsFlags = Int32(SWS_SPLINE.rawValue)
+            | Int32(SWS_ACCURATE_RND.rawValue)
+            | Int32(SWS_FULL_CHR_H_INT.rawValue)
+            | Int32(SWS_FULL_CHR_H_INP.rawValue)
         swsContext = sws_getContext(
             width, height, AV_PIX_FMT_BGRA,
             width, height, AV_PIX_FMT_YUV420P,
-            Int32(SWS_LANCZOS.rawValue), nil, nil, nil
+            swsFlags, nil, nil, nil
         )
         guard let swsContext else {
             print("[FFmpegEncoder] sws_getContext失敗")
             return false
         }
+        swift_sws_set_chroma_loc(swsContext, 1) // 1=Left (H.264/H.265 MPEG-2 standard)
         swift_sws_set_bt709(swsContext)
-        swift_sws_set_chroma_loc(swsContext, 0) // 0=cosited
 
         packet = av_packet_alloc()
         guard packet != nil else { return false }

@@ -52,10 +52,16 @@ static inline void swift_sws_set_bt709(SwsContext *ctx) {
     sws_setColorspaceDetails(ctx, coeff, 1, coeff, 0, 0, 1 << 16, 1 << 16);
 }
 
-// chromaLoc: 0=cosited(左寄せ/JPEG), 1=中心(MPEG2)
+// chromaLoc: 1 = Left (H.264/H.265 MPEG-2 standard, AVCHROMA_LOC_LEFT)
+//            0 = Center (JPEG/cosited, AVCHROMA_LOC_CENTER)
 static inline void swift_sws_set_chroma_loc(SwsContext *ctx, int chromaLoc) {
-    ctx->src_h_chr_pos = chromaLoc;
-    ctx->src_v_chr_pos = chromaLoc;
+    if (chromaLoc == 1) { // Left (H.264 / H.265 standard)
+        ctx->dst_h_chr_pos = 0;   // 0/256 = 0.0 (Left-aligned with luma)
+        ctx->dst_v_chr_pos = 128; // 128/256 = 0.5 (Centered vertically)
+    } else { // Center / JPEG
+        ctx->dst_h_chr_pos = 128;
+        ctx->dst_v_chr_pos = 128;
+    }
 }
 
 static void swift_av_log_null(void *avcl, int level, const char *fmt, va_list vl) {
