@@ -7,11 +7,11 @@ A macOS command-line tool for recording individual application windows with accu
 ## Features
 
 - Per-window capture via ScreenCaptureKit
-- Accurate color reproduction (avoids VideoToolbox color tint issues)
+- Crop support
+- System audio and microphone capture
+- Accurate color reproduction
 - Hardware encoding (VideoToolbox) and software encoding (ffmpeg/libx264/libx265)
 - VFR (Variable Frame Rate) support
-- System audio and microphone capture
-- Crop support
 - Interactive terminal UI with full CLI override
 
 ## Requirements
@@ -39,7 +39,7 @@ window-recorder
 Or fully non-interactive:
 
 ```sh
-window-recorder --window Safari --codec h264 --no-system-audio --no-microphone --output out.mp4 
+window-recorder --window Safari --system-audio --no-microphone --codec h264 --output out.mp4 
 ```
 
 ### Options
@@ -47,14 +47,14 @@ window-recorder --window Safari --codec h264 --no-system-audio --no-microphone -
 | Option | Description |
 |---|---|
 | `--window <title>` | Select window by title |
-| `--output <file>` | Output filename |
-| `--codec <h264\|hevc>` | Select codec |
 | `--crop <T:B:L:R>` | Crop pixels from top, bottom, left, right |
-| `--ffmpeg <preset>` | Use software encoding (libx264/libx265). Preset: ultrafast/superfast/veryfast/faster/fast/medium/slow/slower/veryslow |
 | `--system-audio` | Capture system audio |
-| `--microphone <name>` | Select microphone by name |
 | `--no-system-audio` | Disable system audio |
+| `--microphone <name>` | Select microphone by name |
 | `--no-microphone` | Disable microphone |
+| `--codec <h264\|hevc>` | Select codec |
+| `--ffmpeg <preset>` | Use software encoding (libx264/libx265). Preset: ultrafast/superfast/veryfast/faster/fast/medium/slow/slower/veryslow |
+| `--output <file>` | Output filename |
 | `--debug` | Show some debug logs |
 | `-h, --help` | Show help |
 

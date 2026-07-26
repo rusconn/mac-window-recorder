@@ -29,26 +29,26 @@ struct Main {
             print("""
             使い方: window-recorder [options]
 
-            全ての必須設定は対話で収集します。CLIオプションを指定すると、対応する対話ステップをスキップできます。
+            必須設定は対話で収集します。CLIオプションを指定すると、対応する対話ステップをスキップできます。
 
             オプション:
               --window <title>          ウィンドウを選択（対話をスキップ）
+              --crop <T:B:L:R>          上下左右のクロップピクセル数
               --system-audio            システム音声を収録（対話をスキップ）
               --no-system-audio         システム音声なし（対話をスキップ）
               --microphone <name>       マイクを選択（対話をスキップ）
               --no-microphone           マイクなしを選択（対話をスキップ）
               --codec <h264|hevc>       コーデックを選択（対話をスキップ）
-              --crop <T:B:L:R>          上下左右のクロップピクセル数
               --ffmpeg <preset>         ffmpegを使用（preset: ultrafast/superfast/veryfast/faster/fast/medium/slow/slower/veryslow）
-              --debug                   ffmpeg/libx264/libx265の詳細ログを表示
               --output <file>           出力ファイル名を指定（対話をスキップ）
+              --debug                   ffmpeg/libx264/libx265の詳細ログを表示
               -h, --help                このメッセージを表示
 
             例:
               window-recorder                                        全て対話
               window-recorder --window Safari --no-system-audio       ウィンドウと音声をプリセット
-              window-recorder --window Safari --codec h264 \\
-                  --no-system-audio --no-microphone --output out.mp4    全プリセット（対話なし）
+              window-recorder --window Safari --no-system-audio \\
+                  --no-microphone --codec h264 --output out.mp4    全プリセット（対話なし）
             """)
             exit(0)
         }

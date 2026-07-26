@@ -38,16 +38,16 @@ struct CaptureConfig {
     func summary() -> String {
         var lines: [String] = []
         lines.append("ウィンドウ: \(window?.title ?? "(未選択)")")
-        lines.append("システム音声: \(captureSystemAudio ? "ON" : "OFF")")
-        lines.append("マイク: \(microphoneName ?? "なし")")
-        lines.append("コーデック: \(codec == .h264 ? "H.264" : "HEVC")")
-        lines.append("出力: \(outputName)")
         if hasCrop {
             lines.append("クロップ: \(cropTop):\(cropBottom):\(cropLeft):\(cropRight)")
         }
+        lines.append("システム音声: \(captureSystemAudio ? "ON" : "OFF")")
+        lines.append("マイク: \(microphoneName ?? "なし")")
+        lines.append("コーデック: \(codec == .h264 ? "H.264" : "HEVC")")
         if let preset = ffmpegPreset {
             lines.append("エンコード: ffmpeg (preset=\(preset))")
         }
+        lines.append("出力: \(outputName)")
         return lines.joined(separator: "\n  ")
     }
 }
