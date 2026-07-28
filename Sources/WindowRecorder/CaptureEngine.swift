@@ -67,9 +67,11 @@ struct CaptureEngine {
         let streamConfig = buildStreamConfiguration(window: window, dims: dims)
 
         var videoEncoder: VideoEncoder?
-        var assetWriter: AVAssetWriter?
-        var sysAudioInput: AVAssetWriterInput?
-        var micAudioInput: AVAssetWriterInput?
+        var assetWriterSession: AssetWriterSession?
+        let ffmpegAudioURL = config.ffmpegPreset != nil
+            && (config.captureSystemAudio || config.microphoneDeviceID != nil)
+            ? URL(fileURLWithPath: config.outputName + ".audio.m4a")
+            : nil
 
         if let preset = config.ffmpegPreset {
             let outputURL = URL(fileURLWithPath: config.outputName)
@@ -85,6 +87,7 @@ struct CaptureEngine {
                 crf: crf,
                 preset: preset,
                 outputURL: outputURL,
+                audioURL: ffmpegAudioURL,
                 debug: config.debug
             )
             guard videoEncoder != nil else {
@@ -92,56 +95,36 @@ struct CaptureEngine {
                 return
             }
 
-            if config.captureSystemAudio || config.microphoneDeviceID != nil {
-                let audioURL = URL(fileURLWithPath: config.outputName + ".audio.m4a")
-                if FileManager.default.fileExists(atPath: audioURL.path) {
-                    try FileManager.default.removeItem(at: audioURL)
-                }
-                assetWriter = try AVAssetWriter(outputURL: audioURL, fileType: .m4a)
-                let audioSettings: [String: Any] = [
-                    AVFormatIDKey: kAudioFormatMPEG4AAC,
-                    AVSampleRateKey: 48000,
-                    AVNumberOfChannelsKey: 2,
-                    AVEncoderBitRateKey: 256000
-                ]
-                if config.captureSystemAudio {
-                    let input = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
-                    input.expectsMediaDataInRealTime = true
-                    if assetWriter!.canAdd(input) {
-                        assetWriter!.add(input)
-                        sysAudioInput = input
-                    }
-                }
-                if config.microphoneDeviceID != nil {
-                    let input = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
-                    input.expectsMediaDataInRealTime = true
-                    if assetWriter!.canAdd(input) {
-                        assetWriter!.add(input)
-                        micAudioInput = input
-                    }
-                }
-                assetWriter!.startWriting()
+            if let ffmpegAudioURL {
+                let session = try AssetWriterSession(
+                    outputURL: ffmpegAudioURL,
+                    fileType: .m4a,
+                    captureSystemAudio: config.captureSystemAudio,
+                    captureMicrophone: config.microphoneDeviceID != nil
+                )
+                session.startWriting()
+                assetWriterSession = session
             }
         } else {
-            let encoder = try VideoToolboxEncoder(
-                width: dims.videoWidth,
-                height: dims.videoHeight,
-                codec: config.codec,
+            let session = try AssetWriterSession(
                 outputURL: URL(fileURLWithPath: config.outputName),
+                fileType: .mp4,
                 captureSystemAudio: config.captureSystemAudio,
                 captureMicrophone: config.microphoneDeviceID != nil
             )
+            let encoder = VideoToolboxEncoder(
+                width: dims.videoWidth,
+                height: dims.videoHeight,
+                codec: config.codec,
+                assetWriterSession: session
+            )
             videoEncoder = encoder
-            assetWriter = encoder.assetWriter
-            sysAudioInput = encoder.sysAudioInput
-            micAudioInput = encoder.micAudioInput
+            assetWriterSession = session
         }
 
         let writer = FrameWriter(
-            assetWriter: assetWriter,
             fps: 60,
-            sysAudioInput: sysAudioInput,
-            micAudioInput: micAudioInput,
+            assetWriterSession: assetWriterSession,
             videoEncoder: videoEncoder
         )
 
@@ -173,32 +156,10 @@ struct CaptureEngine {
         }
         writer.finishSession()
 
-        if let assetWriter {
-            await assetWriter.finishWriting()
+        if let assetWriterSession {
+            await assetWriterSession.finishWriting()
         }
-
-        if config.ffmpegPreset != nil {
-            let audioPath = config.outputName + ".audio.m4a"
-            if FileManager.default.fileExists(atPath: audioPath) {
-                let outputURL = URL(fileURLWithPath: config.outputName)
-                let audioURL = URL(fileURLWithPath: audioPath)
-                let mergedURL = URL(fileURLWithPath: outputURL.path + ".merged.mp4")
-
-                if FFmpegEncoder.mergeAudioVideo(videoURL: outputURL, audioURL: audioURL, outputURL: mergedURL) {
-                    try FileManager.default.removeItem(at: outputURL)
-                    try FileManager.default.moveItem(at: mergedURL, to: outputURL)
-                }
-                if let attrs = try? FileManager.default.attributesOfItem(atPath: audioPath),
-                   let size = attrs[.size] as? Int {
-                    print("[debug] .audio.m4a サイズ: \(size) bytes")
-                }
-                if !config.debug {
-                    try FileManager.default.removeItem(at: audioURL)
-                } else {
-                    print("[debug] .audio.m4a を保持中: \(audioPath)")
-                }
-            }
-        }
+        try videoEncoder?.finalizeRecording()
 
         print("保存しました: \(config.outputName)")
         writer.logStats()

@@ -20,8 +20,8 @@ import os
 import CFFmpeg
 
 final class FFmpegEncoder: VideoEncoder {
-    let managesAssetWriterSession = false
     private let outputURL: URL
+    private let audioURL: URL?
     private let width: Int32
     private let height: Int32
     private let lock = OSAllocatedUnfairLock()
@@ -170,10 +170,20 @@ final class FFmpegEncoder: VideoEncoder {
         return true
     }
 
-    init?(width: Int, height: Int, codec: String, crf: Int, preset: String, outputURL: URL, debug: Bool = false) {
+    init?(
+        width: Int,
+        height: Int,
+        codec: String,
+        crf: Int,
+        preset: String,
+        outputURL: URL,
+        audioURL: URL?,
+        debug: Bool = false
+    ) {
         self.width = Int32(width)
         self.height = Int32(height)
         self.outputURL = outputURL
+        self.audioURL = audioURL
         self.debug = debug
 
         let savedFd = debug ? -1 : swift_suppress_stderr()
@@ -382,6 +392,25 @@ final class FFmpegEncoder: VideoEncoder {
             }
         }
         return 0
+    }
+
+    func finalizeRecording() throws {
+        guard let audioURL, FileManager.default.fileExists(atPath: audioURL.path) else { return }
+
+        let mergedURL = URL(fileURLWithPath: outputURL.path + ".merged.mp4")
+        if Self.mergeAudioVideo(videoURL: outputURL, audioURL: audioURL, outputURL: mergedURL) {
+            try FileManager.default.removeItem(at: outputURL)
+            try FileManager.default.moveItem(at: mergedURL, to: outputURL)
+        }
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: audioURL.path),
+           let size = attrs[.size] as? Int {
+            print("[debug] .audio.m4a サイズ: \(size) bytes")
+        }
+        if !debug {
+            try FileManager.default.removeItem(at: audioURL)
+        } else {
+            print("[debug] .audio.m4a を保持中: \(audioURL.path)")
+        }
     }
 
     private func drainPackets() {

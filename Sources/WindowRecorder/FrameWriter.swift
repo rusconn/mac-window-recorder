@@ -20,9 +20,7 @@ import AVFoundation
 import os
 
 final class FrameWriter: NSObject, SCStreamOutput, SCStreamDelegate {
-    let assetWriter: AVAssetWriter?
-    let sysAudioInput: AVAssetWriterInput?
-    let micAudioInput: AVAssetWriterInput?
+    let assetWriterSession: AssetWriterSession?
     let fps: Int
     let videoEncoder: VideoEncoder?
 
@@ -40,14 +38,10 @@ final class FrameWriter: NSObject, SCStreamOutput, SCStreamDelegate {
     private var largeGapCount = 0
     private var intervalCount = 0
     private let lock = OSAllocatedUnfairLock()
-    init(assetWriter: AVAssetWriter?,
-         fps: Int,
-         sysAudioInput: AVAssetWriterInput? = nil,
-         micAudioInput: AVAssetWriterInput? = nil,
+    init(fps: Int,
+         assetWriterSession: AssetWriterSession? = nil,
          videoEncoder: VideoEncoder? = nil) {
-        self.assetWriter = assetWriter
-        self.sysAudioInput = sysAudioInput
-        self.micAudioInput = micAudioInput
+        self.assetWriterSession = assetWriterSession
         self.fps = fps
         self.videoEncoder = videoEncoder
         super.init()
@@ -62,20 +56,9 @@ final class FrameWriter: NSObject, SCStreamOutput, SCStreamDelegate {
         if type == .microphone || type == .audio {
             guard CMSampleBufferIsValid(sampleBuffer) else { return }
 
-            // マイク音声はmicAudioInputにのみルーティング
-            let target: AVAssetWriterInput?
-            if type == .microphone {
-                target = micAudioInput
-            } else {
-                target = sysAudioInput
-            }
-            guard target != nil else { return }
-
-            var shouldAppend = false
-            var appendSampleBuffer: CMSampleBuffer?
+            guard assetWriterSession?.capturesAudio == true else { return }
 
             lock.withLockUnchecked {
-                guard assetWriter?.status == .writing else { return }
                 let pts = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
 
                 // 音声のみの場合は従来通り
@@ -84,14 +67,10 @@ final class FrameWriter: NSObject, SCStreamOutput, SCStreamDelegate {
                     if !sessionStartPTS.isValid {
                         sessionStartPTS = pts
                         videoEncoder?.startSession(at: pts)
-                        if videoEncoder?.managesAssetWriterSession != true {
-                            assetWriter?.startSession(atSourceTime: pts)
-                        }
+                        assetWriterSession?.startSession(at: pts)
                         hasStartedSession = true
                     }
                     lastAudioPTS = pts
-                    shouldAppend = true
-                    appendSampleBuffer = sampleBuffer
                     return
                 }
 
@@ -99,21 +78,15 @@ final class FrameWriter: NSObject, SCStreamOutput, SCStreamDelegate {
                 if !hasStartedSession {
                     sessionStartPTS = pts
                     videoEncoder?.startSession(at: pts)
-                    if videoEncoder?.managesAssetWriterSession != true {
-                        assetWriter?.startSession(atSourceTime: pts)
-                    }
+                    assetWriterSession?.startSession(at: pts)
                     hasStartedSession = true
                 }
 
                 // セッション開始済み
                 lastAudioPTS = pts
-                shouldAppend = true
-                appendSampleBuffer = sampleBuffer
             }
 
-            if shouldAppend, let appendSampleBuffer {
-                target?.append(appendSampleBuffer)
-            }
+            assetWriterSession?.append(sampleBuffer, type: type)
             return
         }
 
@@ -149,7 +122,7 @@ final class FrameWriter: NSObject, SCStreamOutput, SCStreamDelegate {
             }
             return
         }
-        let hasAudio = sysAudioInput != nil || micAudioInput != nil
+        let hasAudio = assetWriterSession?.capturesAudio == true
         if hasAudio && !hasStartedSession { return }
         if !hasStartedSession { startSessionIfNeeded(at: pts) }
 
@@ -175,20 +148,12 @@ final class FrameWriter: NSObject, SCStreamOutput, SCStreamDelegate {
         receivedFrameCount += videoEncoder?.finish() ?? 0
 
         lock.withLockUnchecked {
-            for input in [sysAudioInput, micAudioInput] {
-                if let input, assetWriter?.status == .writing {
-                    input.markAsFinished()
-                }
-            }
-        }
-
-        lock.withLockUnchecked {
-            if hasStartedSession, let assetWriter {
+            if hasStartedSession {
                 let finalEnd = latestValidTime(
                     lastVideoPresentationTime,
                     lastAudioPTS
                 )
-                assetWriter.endSession(atSourceTime: finalEnd)
+                assetWriterSession?.finishSession(at: finalEnd)
                 hasStartedSession = false
             }
         }
@@ -224,9 +189,7 @@ final class FrameWriter: NSObject, SCStreamOutput, SCStreamDelegate {
             if !sessionStartPTS.isValid {
                 sessionStartPTS = pts
                 videoEncoder?.startSession(at: pts)
-                if videoEncoder?.managesAssetWriterSession != true {
-                    assetWriter?.startSession(atSourceTime: pts)
-                }
+                assetWriterSession?.startSession(at: pts)
                 hasStartedSession = true
             }
             return sessionStartPTS

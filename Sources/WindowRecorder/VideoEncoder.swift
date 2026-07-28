@@ -17,10 +17,14 @@ import CoreMedia
 import CoreVideo
 
 protocol VideoEncoder: AnyObject {
-    var managesAssetWriterSession: Bool { get }
     func startSession(at pts: CMTime)
     func startRequestingMediaData()
     func writeFrame(_ pixelBuffer: CVPixelBuffer, pts: CMTime)
     @discardableResult
     func finish() -> Int
+    func finalizeRecording() throws
+}
+
+extension VideoEncoder {
+    func finalizeRecording() throws {}
 }

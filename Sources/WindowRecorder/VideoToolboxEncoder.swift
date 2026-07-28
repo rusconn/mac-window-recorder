@@ -20,18 +20,13 @@ import Foundation
 import os
 
 final class VideoToolboxEncoder: VideoEncoder {
-    let assetWriter: AVAssetWriter
-    let sysAudioInput: AVAssetWriterInput?
-    let micAudioInput: AVAssetWriterInput?
-
+    private let assetWriterSession: AssetWriterSession
     private let pixelBufferAdaptor: AVAssetWriterInputPixelBufferAdaptor
     private let videoInput: AVAssetWriterInput
     private let videoLock = OSAllocatedUnfairLock()
     private let frameAvailable = DispatchSemaphore(value: 0)
     private let finishDrainTimeout: TimeInterval = 5.0
     private var pendingFrames: [PendingFrame] = []
-
-    let managesAssetWriterSession = true
 
     private struct PendingFrame: @unchecked Sendable {
         let pixelBuffer: CVPixelBuffer
@@ -42,15 +37,9 @@ final class VideoToolboxEncoder: VideoEncoder {
         width: Int,
         height: Int,
         codec: AVVideoCodecType,
-        outputURL: URL,
-        captureSystemAudio: Bool,
-        captureMicrophone: Bool
-    ) throws {
-        if FileManager.default.fileExists(atPath: outputURL.path) {
-            try FileManager.default.removeItem(at: outputURL)
-        }
-
-        assetWriter = try AVAssetWriter(outputURL: outputURL, fileType: .mp4)
+        assetWriterSession: AssetWriterSession
+    ) {
+        self.assetWriterSession = assetWriterSession
         let fps = 60
         let pixelsPerSecond = Double(width) * Double(height) * Double(fps)
         let bitratePerPixel = codec == .hevc ? 0.06 : 0.08
@@ -86,44 +75,12 @@ final class VideoToolboxEncoder: VideoEncoder {
                 kCVPixelBufferHeightKey as String: height
             ]
         )
-        assetWriter.add(videoInput)
-
-        let audioSettings: [String: Any] = [
-            AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVSampleRateKey: 48000,
-            AVNumberOfChannelsKey: 2,
-            AVEncoderBitRateKey: 256000
-        ]
-        if captureSystemAudio {
-            let input = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
-            input.expectsMediaDataInRealTime = true
-            if assetWriter.canAdd(input) {
-                assetWriter.add(input)
-                sysAudioInput = input
-            } else {
-                sysAudioInput = nil
-            }
-        } else {
-            sysAudioInput = nil
-        }
-        if captureMicrophone {
-            let input = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
-            input.expectsMediaDataInRealTime = true
-            if assetWriter.canAdd(input) {
-                assetWriter.add(input)
-                micAudioInput = input
-            } else {
-                micAudioInput = nil
-            }
-        } else {
-            micAudioInput = nil
-        }
-
-        assetWriter.startWriting()
+        assetWriterSession.add(videoInput)
+        assetWriterSession.startWriting()
     }
 
     func startSession(at pts: CMTime) {
-        assetWriter.startSession(atSourceTime: pts)
+        // AssetWriterSession owns the AVAssetWriter session for both encoders.
     }
 
     func startRequestingMediaData() {
@@ -148,7 +105,7 @@ final class VideoToolboxEncoder: VideoEncoder {
     }
 
     private func pullVideoFrames() {
-        guard assetWriter.status == .writing else { return }
+        guard assetWriterSession.isWriting else { return }
 
         while videoInput.isReadyForMoreMediaData {
             let frame: PendingFrame? = videoLock.withLock {
@@ -164,7 +121,7 @@ final class VideoToolboxEncoder: VideoEncoder {
     }
 
     private func drainPendingVideoFrames() -> Int {
-        guard assetWriter.status == .writing else { return 0 }
+        guard assetWriterSession.isWriting else { return 0 }
 
         let deadline = Date().addingTimeInterval(finishDrainTimeout)
         while true {
