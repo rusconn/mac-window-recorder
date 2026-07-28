@@ -47,7 +47,7 @@ fix: prevent crash when recording audio in ffmpeg mode
 ```
 perf: reduce encoding latency by using NV12 input
 
-- Use NV12 pixel format for AVAssetWriter path (ffmpeg path stays BGRA)
+- Use NV12 pixel format for VideoToolboxEncoder (FFmpegEncoder stays BGRA)
 - SCStream delivers NV12 directly, eliminating BGRA→YUV conversion step
 - May slightly reduce color edge artifacts due to better HW encoder affinity
 ```
