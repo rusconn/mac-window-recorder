@@ -46,6 +46,8 @@ struct CaptureConfig {
         lines.append("コーデック: \(codec == .h264 ? "H.264" : "HEVC")")
         if let preset = ffmpegPreset {
             lines.append("エンコード: ffmpeg (preset=\(preset))")
+        } else {
+            lines.append("エンコード: VideoToolbox")
         }
         lines.append("出力: \(outputName)")
         return lines.joined(separator: "\n  ")
