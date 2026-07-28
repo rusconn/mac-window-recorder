@@ -27,7 +27,7 @@ struct Main {
 
         if parsed.help {
             print("""
-            使い方: window-recorder [options]
+            使い方: accurec [options]
 
             必須設定は対話で収集します。CLIオプションを指定すると、対応する対話ステップをスキップできます。
 
@@ -45,9 +45,9 @@ struct Main {
               -h, --help                このメッセージを表示
 
             例:
-              window-recorder                                        全て対話
-              window-recorder --window Safari --no-system-audio       ウィンドウと音声をプリセット
-              window-recorder --window Safari --no-system-audio \\
+              accurec                                        全て対話
+              accurec --window Safari --no-system-audio       ウィンドウと音声をプリセット
+              accurec --window Safari --no-system-audio \\
                   --no-microphone --codec h264 --output out.mp4    全プリセット（対話なし）
             """)
             exit(0)

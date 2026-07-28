@@ -1,4 +1,4 @@
-# mac-window-recorder
+# accurec: accurate recorder
 
 A macOS command-line tool for recording individual application windows with accurate colors and minimal stutter.
 
@@ -26,20 +26,20 @@ A macOS command-line tool for recording individual application windows with accu
 swift build -c release
 ```
 
-The binary is at `.build/release/window-recorder`.
+The binary is at `.build/release/accurec`.
 
 ## Usage
 
 Run interactively:
 
 ```sh
-window-recorder
+accurec
 ```
 
 Or fully non-interactive:
 
 ```sh
-window-recorder --window Safari --system-audio --no-microphone --codec h264 --output out.mp4 
+accurec --window Safari --system-audio --no-microphone --codec h264 --output out.mp4
 ```
 
 ### Options

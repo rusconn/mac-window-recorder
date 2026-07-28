@@ -19,7 +19,7 @@ import PackageDescription
 let packageDir = String(#filePath.dropLast("Package.swift".count))
 
 let package = Package(
-    name: "window-recorder",
+    name: "accurec",
     platforms: [.macOS(.v15)],
     targets: [
         .executableTarget(
@@ -34,9 +34,9 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "window-recorder",
+            name: "accurec",
             dependencies: ["CFFmpeg"],
-            path: "Sources/WindowRecorder",
+            path: "Sources/AccuRec",
             swiftSettings: [
                 .swiftLanguageMode(.v5),
             ],
