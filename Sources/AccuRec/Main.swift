@@ -39,6 +39,7 @@ struct Main {
               --microphone <name>       マイクを選択（対話をスキップ）
               --no-microphone           マイクなしを選択（対話をスキップ）
               --codec <h264|hevc>       コーデックを選択（対話をスキップ）
+              --chroma-subsampling <420|444>  クロマサブサンプルを選択（デフォルト: 420）
               --ffmpeg <preset>         ffmpegを使用（preset: ultrafast/superfast/veryfast/faster/fast/medium/slow/slower/veryslow）
               --output <file>           出力ファイル名を指定（対話をスキップ）
               --debug                   ffmpeg/libx264/libx265の詳細ログを表示

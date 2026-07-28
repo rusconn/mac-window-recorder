@@ -29,6 +29,7 @@ struct ParsedArguments {
     var noMicrophone: Bool?
     var systemAudio: Bool?
     var ffmpegPreset: String?
+    var chromaSubsampling: ChromaSubsampling?
     var debug: Bool?
 
     var hasWindow: Bool { windowQuery != nil }
@@ -40,6 +41,7 @@ struct ParsedArguments {
     var hasSystemAudio: Bool { systemAudio == true }
     var hasNoSystemAudio: Bool { systemAudio == false }
     var hasFfmpeg: Bool { ffmpegPreset != nil }
+    var hasChromaSubsampling: Bool { chromaSubsampling != nil }
 }
 
 struct ArgumentParser {
@@ -112,6 +114,13 @@ struct ArgumentParser {
                 }
                 parsed.ffmpegPreset = preset
                 i += 2
+            case "--chroma-subsampling" where i + 1 < args.count:
+                guard let cs = parseChromaSubsampling(args[i + 1]) else {
+                    print("エラー: --chroma-subsampling は 420 または 444 を指定してください。")
+                    exit(1)
+                }
+                parsed.chromaSubsampling = cs
+                i += 2
             case "--debug":
                 parsed.debug = true
                 i += 1
@@ -140,6 +149,14 @@ struct ArgumentParser {
         switch value.lowercased() {
         case "h264": return .h264
         case "hevc", "h265": return .hevc
+        default: return nil
+        }
+    }
+
+    private static func parseChromaSubsampling(_ value: String) -> ChromaSubsampling? {
+        switch value {
+        case "420": return .yuv420
+        case "444": return .yuv444
         default: return nil
         }
     }

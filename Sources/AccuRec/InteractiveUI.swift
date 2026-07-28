@@ -36,6 +36,9 @@ struct InteractiveUI {
         config.microphoneDeviceID = mic.uniqueID
         config.microphoneName = mic.localizedName
         config.codec = selectCodec(preset: parsed.codec)
+        if let cs = parsed.chromaSubsampling {
+            config.chromaSubsampling = cs
+        }
 
         if let top = parsed.cropTop, let bottom = parsed.cropBottom,
            let left = parsed.cropLeft, let right = parsed.cropRight {

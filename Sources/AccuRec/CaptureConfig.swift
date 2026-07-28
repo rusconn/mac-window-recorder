@@ -17,9 +17,15 @@ import Foundation
 import ScreenCaptureKit
 import AVFoundation
 
+enum ChromaSubsampling: String {
+    case yuv420
+    case yuv444
+}
+
 struct CaptureConfig {
     var window: SCWindow?
     var codec: AVVideoCodecType = .h264
+    var chromaSubsampling: ChromaSubsampling = .yuv420
     var outputName: String = "capture_output.mp4"
     var cropTop: Int = 0
     var cropBottom: Int = 0
@@ -44,6 +50,7 @@ struct CaptureConfig {
         lines.append("システム音声: \(captureSystemAudio ? "ON" : "OFF")")
         lines.append("マイク: \(microphoneName ?? "なし")")
         lines.append("コーデック: \(codec == .h264 ? "H.264" : "HEVC")")
+        lines.append("クロマサブサンプル: \(chromaSubsampling == .yuv420 ? "YUV420" : "YUV444")")
         if let preset = ffmpegPreset {
             lines.append("エンコード: ffmpeg (preset=\(preset))")
         } else {

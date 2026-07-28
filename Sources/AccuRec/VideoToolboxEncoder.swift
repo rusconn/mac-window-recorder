@@ -28,6 +28,7 @@ final class VideoToolboxEncoder: VideoEncoder {
     private let frameAvailable = DispatchSemaphore(value: 0)
     private let finishDrainTimeout: TimeInterval = 5.0
     private var pendingFrames: [PendingFrame] = []
+    private let chromaSubsampling: ChromaSubsampling
 
     private struct PendingFrame: @unchecked Sendable {
         let pixelBuffer: CVPixelBuffer
@@ -38,9 +39,11 @@ final class VideoToolboxEncoder: VideoEncoder {
         width: Int,
         height: Int,
         codec: AVVideoCodecType,
+        chromaSubsampling: ChromaSubsampling = .yuv420,
         assetWriterSession: AssetWriterSession
     ) {
         self.assetWriterSession = assetWriterSession
+        self.chromaSubsampling = chromaSubsampling
         let fps = 60
         let pixelsPerSecond = Double(width) * Double(height) * Double(fps)
         let bitratePerPixel = codec == .hevc ? 0.06 : 0.08
@@ -55,7 +58,12 @@ final class VideoToolboxEncoder: VideoEncoder {
             compressionProperties[AVVideoProfileLevelKey] = AVVideoProfileLevelH264HighAutoLevel
         }
         if codec == .hevc {
-            compressionProperties[kVTCompressionPropertyKey_ProfileLevel as String] = kVTProfileLevel_HEVC_Main10_AutoLevel
+            if chromaSubsampling == .yuv444 {
+                // HEVC Main 4:4:4 (no named constant in macOS SDK)
+                compressionProperties[kVTCompressionPropertyKey_ProfileLevel as String] = "HEVC_Main444_AutoLevel" as CFString
+            } else {
+                compressionProperties[kVTCompressionPropertyKey_ProfileLevel as String] = kVTProfileLevel_HEVC_Main10_AutoLevel
+            }
         }
 
         let videoSettings: [String: Any] = [

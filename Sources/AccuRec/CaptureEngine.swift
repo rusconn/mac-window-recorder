@@ -41,8 +41,10 @@ struct CaptureEngine {
 
         let origW = videoWidth
         let origH = videoHeight
-        if videoWidth % 2 != 0 { videoWidth -= 1 }
-        if videoHeight % 2 != 0 { videoHeight -= 1 }
+        if config.chromaSubsampling == .yuv420 {
+            if videoWidth % 2 != 0 { videoWidth -= 1 }
+            if videoHeight % 2 != 0 { videoHeight -= 1 }
+        }
         if videoWidth != origW || videoHeight != origH {
             print("奇数サイズ検出: \(origW)x\(origH) → \(videoWidth)x\(videoHeight)にクロップ")
         }
@@ -55,6 +57,11 @@ struct CaptureEngine {
             swift_av_log_set_default()
         } else {
             swift_av_log_set_quiet()
+        }
+
+        if config.codec == .h264 && config.chromaSubsampling == .yuv444 {
+            print("エラー: H.264はYUV444非対応です。HEVCをお使いください。")
+            exit(1)
         }
 
         guard let window = config.window else {
@@ -88,6 +95,7 @@ struct CaptureEngine {
                 preset: preset,
                 outputURL: outputURL,
                 audioURL: ffmpegAudioURL,
+                chromaSubsampling: config.chromaSubsampling,
                 debug: config.debug
             )
             guard videoEncoder != nil else {
@@ -116,6 +124,7 @@ struct CaptureEngine {
                 width: dims.videoWidth,
                 height: dims.videoHeight,
                 codec: config.codec,
+                chromaSubsampling: config.chromaSubsampling,
                 assetWriterSession: session
             )
             videoEncoder = encoder
