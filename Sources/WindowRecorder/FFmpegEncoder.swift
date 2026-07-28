@@ -19,7 +19,8 @@ import CoreVideo
 import os
 import CFFmpeg
 
-final class FFmpegEncoder {
+final class FFmpegEncoder: VideoEncoder {
+    let managesAssetWriterSession = false
     private let outputURL: URL
     private let width: Int32
     private let height: Int32
@@ -37,6 +38,7 @@ final class FFmpegEncoder {
     private let debug: Bool
     private var headerWritten = false
     private var frameCount = 0
+    private var sessionStartPTS: CMTime = .invalid
 
     static func mergeAudioVideo(videoURL: URL, audioURL: URL, outputURL: URL) -> Bool {
         var videoInCtx: UnsafeMutablePointer<AVFormatContext>?
@@ -290,6 +292,14 @@ final class FFmpegEncoder {
         return true
     }
 
+    func startSession(at pts: CMTime) {
+        if !sessionStartPTS.isValid {
+            sessionStartPTS = pts
+        }
+    }
+
+    func startRequestingMediaData() {}
+
     func writeFrame(_ pixelBuffer: CVPixelBuffer, pts: CMTime) {
         semaphore.wait()
 
@@ -301,7 +311,10 @@ final class FFmpegEncoder {
             let ownedData = UnsafeMutableRawPointer.allocate(byteCount: copySize, alignment: 1)
             ownedData.copyMemory(from: srcBase, byteCount: copySize)
             CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
-            let ptsUs = Int64(CMTimeGetSeconds(pts) * 1_000_000)
+            let relativePTS = self.sessionStartPTS.isValid
+                ? CMTimeSubtract(pts, self.sessionStartPTS)
+                : pts
+            let ptsUs = Int64(CMTimeGetSeconds(relativePTS) * 1_000_000)
 
             self.lock.withLockUnchecked {
                 guard let codecContext,
@@ -351,7 +364,7 @@ final class FFmpegEncoder {
         }
     }
 
-    func finish() {
+    func finish() -> Int {
         encodeQueue.sync {
             self.lock.withLockUnchecked {
                 defer { self.freeResources() }
@@ -368,6 +381,7 @@ final class FFmpegEncoder {
                 print("[FFmpegEncoder] 合計フレーム数: \(self.frameCount)")
             }
         }
+        return 0
     }
 
     private func drainPackets() {

@@ -66,9 +66,8 @@ struct CaptureEngine {
         let filter = SCContentFilter(desktopIndependentWindow: window)
         let streamConfig = buildStreamConfiguration(window: window, dims: dims)
 
-        var ffmpegEncoder: FFmpegEncoder?
+        var videoEncoder: VideoEncoder?
         var assetWriter: AVAssetWriter?
-        var pixelBufferAdaptor: AVAssetWriterInputPixelBufferAdaptor?
         var sysAudioInput: AVAssetWriterInput?
         var micAudioInput: AVAssetWriterInput?
 
@@ -79,7 +78,7 @@ struct CaptureEngine {
             }
             let codecName = config.codec == .hevc ? "libx265" : "libx264"
             let crf = config.codec == .hevc ? 18 : 16
-            ffmpegEncoder = FFmpegEncoder(
+            videoEncoder = FFmpegEncoder(
                 width: dims.videoWidth,
                 height: dims.videoHeight,
                 codec: codecName,
@@ -88,7 +87,7 @@ struct CaptureEngine {
                 outputURL: outputURL,
                 debug: config.debug
             )
-            guard ffmpegEncoder != nil else {
+            guard videoEncoder != nil else {
                 print("FFmpegEncoder初期化失敗")
                 return
             }
@@ -124,21 +123,26 @@ struct CaptureEngine {
                 assetWriter!.startWriting()
             }
         } else {
-            let result = try buildAssetWriter(window: window, dims: dims)
-            assetWriter = result.writer
-            pixelBufferAdaptor = result.adaptor
-            sysAudioInput = result.sysAudioInput
-            micAudioInput = result.micAudioInput
-            assetWriter!.startWriting()
+            let encoder = try VideoToolboxEncoder(
+                width: dims.videoWidth,
+                height: dims.videoHeight,
+                codec: config.codec,
+                outputURL: URL(fileURLWithPath: config.outputName),
+                captureSystemAudio: config.captureSystemAudio,
+                captureMicrophone: config.microphoneDeviceID != nil
+            )
+            videoEncoder = encoder
+            assetWriter = encoder.assetWriter
+            sysAudioInput = encoder.sysAudioInput
+            micAudioInput = encoder.micAudioInput
         }
 
         let writer = FrameWriter(
             assetWriter: assetWriter,
-            pixelBufferAdaptor: pixelBufferAdaptor,
             fps: 60,
             sysAudioInput: sysAudioInput,
             micAudioInput: micAudioInput,
-            ffmpegEncoder: ffmpegEncoder
+            videoEncoder: videoEncoder
         )
 
         let stream = SCStream(filter: filter, configuration: streamConfig, delegate: writer)
@@ -232,95 +236,4 @@ struct CaptureEngine {
         return config
     }
 
-    private func buildAssetWriter(
-        window: SCWindow, dims: Dimensions
-    ) throws -> (
-        writer: AVAssetWriter,
-        adaptor: AVAssetWriterInputPixelBufferAdaptor?,
-        sysAudioInput: AVAssetWriterInput?,
-        micAudioInput: AVAssetWriterInput?
-    ) {
-        let videoWidth = dims.videoWidth
-        let videoHeight = dims.videoHeight
-
-        let outputURL = URL(fileURLWithPath: config.outputName)
-        if FileManager.default.fileExists(atPath: config.outputName) {
-            try FileManager.default.removeItem(at: outputURL)
-        }
-
-        let assetWriter = try AVAssetWriter(outputURL: outputURL, fileType: .mp4)
-        let fps = 60
-        let pixelsPerSecond = Double(videoWidth) * Double(videoHeight) * Double(fps)
-        let bitratePerPixel: Double
-        switch config.codec {
-        case .hevc: bitratePerPixel = 0.06
-        default: bitratePerPixel = 0.08
-        }
-        let averageBitrate = Int(pixelsPerSecond * bitratePerPixel)
-
-        var compressionProperties: [String: Any] = [
-            AVVideoAverageBitRateKey: averageBitrate,
-            AVVideoExpectedSourceFrameRateKey: fps,
-            AVVideoMaxKeyFrameIntervalKey: fps * 2
-        ]
-        if config.codec == .h264 {
-            compressionProperties[AVVideoProfileLevelKey] = AVVideoProfileLevelH264HighAutoLevel
-        }
-
-        let videoInputSettings: [String: Any] = [
-            AVVideoCodecKey: config.codec,
-            AVVideoWidthKey: videoWidth,
-            AVVideoHeightKey: videoHeight,
-            AVVideoCompressionPropertiesKey: compressionProperties,
-            AVVideoColorPropertiesKey: [
-                AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
-                AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
-                AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
-            ]
-        ]
-
-        let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoInputSettings)
-        videoInput.expectsMediaDataInRealTime = true
-
-        let sourcePixelBufferAttributes: [String: Any] = [
-            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
-            kCVPixelBufferWidthKey as String: videoWidth,
-            kCVPixelBufferHeightKey as String: videoHeight
-        ]
-        let pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(
-            assetWriterInput: videoInput,
-            sourcePixelBufferAttributes: sourcePixelBufferAttributes
-        )
-
-        assetWriter.add(videoInput)
-
-        var sysAudioInput: AVAssetWriterInput? = nil
-        var micAudioInput: AVAssetWriterInput? = nil
-        if config.captureSystemAudio || config.microphoneDeviceID != nil {
-            let audioSettings: [String: Any] = [
-                AVFormatIDKey: kAudioFormatMPEG4AAC,
-                AVSampleRateKey: 48000,
-                AVNumberOfChannelsKey: 2,
-                AVEncoderBitRateKey: 256000
-            ]
-            if config.captureSystemAudio {
-                let input = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
-                input.expectsMediaDataInRealTime = true
-                if assetWriter.canAdd(input) {
-                    assetWriter.add(input)
-                    sysAudioInput = input
-                }
-            }
-            if config.microphoneDeviceID != nil {
-                let input = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
-                input.expectsMediaDataInRealTime = true
-                if assetWriter.canAdd(input) {
-                    assetWriter.add(input)
-                    micAudioInput = input
-                }
-            }
-        }
-
-        return (assetWriter, pixelBufferAdaptor, sysAudioInput, micAudioInput)
-    }
 }
