@@ -23,7 +23,7 @@ VideoToolboxによるハードウェアエンコード結果には僅かな変�
 
 1. `avformat_alloc_output_context2` で出力コンテキストを確保
 2. `avcodec_find_encoder_by_name` でlibx264/libx265エンコーダを取得
-3. `sws_scale` でBGRA→YUV420P変換（BT.709カラースペース指定）
+3. `sws_scale` でBGRA→YUV420P(8bit) / YUV420P10LE(10bit) 変換（BT.709カラースペース指定）
 4. `avcodec_send_frame` / `avcodec_receive_packet` でフレームごとにエンコード
 5. `av_interleaved_write_frame` で各パケットに実際のPTSを付与して書き出し
 
@@ -36,7 +36,7 @@ VideoToolboxによるハードウェアエンコード結果には僅かな変�
 | libavcodec | エンコード |
 | libavformat | コンテナ書き込み・mux |
 | libavutil | フレーム管理 |
-| libswscale | BGRA→YUV420P変換 |
+| libswscale | BGRA→YUV420P/YUV420P10LE変換 |
 
 ## ffmpeg の同梱（ベンダリング）
 
@@ -64,13 +64,20 @@ BGRA→YUV420P変換時、クロマ平面を2x縮小する補間アルゴリズ�
 
 | 設定 / フラグ | 用途・効果 |
 |---|---|
-| **`SWS_SPLINE`** | スプライン曲線補間（Cubic Keys Spline）。Lanczosと同等の鋭さを持ちつつリンギング（変色）を抑える（現行設定） |
+| **`SWS_LANCZOS`** | Lanczos補間。鋭いエッジ保持に優れる。スクリーンキャプチャの境界線に最適（現行設定） |
 | **`SWS_ACCURATE_RND`** | 丸め処理の精度を向上させ、変換時の量子化誤差・偽色を抑制 |
 | **`SWS_FULL_CHR_H_INT`** | フル精度クロマアップサンプリング |
 | **`SWS_FULL_CHR_H_INP`** | RGBダウンスケール時のフル精度クロマ補間（RGB→YUV420P変換時のエッジ変色を低減） |
 | **Chroma Location: Left** | `dst_h_chr_pos = 0`, `dst_v_chr_pos = 128` を設定。H.264/H.265の規格(Left)にクロマ位置を完全に一致させ、エッジの片寄り変色を抑える |
 
-`SWS_SPLINE` と上記精度フラグおよびクロマ位置設定(Left)を合わせ込むことで、境界線周辺でのクロマ連続性と位置正確性を向上させている。
+`SWS_LANCZOS` と上記精度フラグおよびクロマ位置設定(Left)を合わせ込むことで、境界線周辺でのクロマ連続性と位置正確性を向上させている。
+
+## 10bitエンコーディング
+
+HEVC(libx265)使用時、出力ピクセルフォーマットを `YUV420P10LE` (10bit) に設定する。
+H.264(libx264)は従来の `YUV420P` (8bit) のまま。
+
+8bitのBGRA入力を10bit YUVに変換する際、`sws_scale` が内部的に高精度補間を行い、クロマの量子化段階が256段階→1024段階に向上する。これにより、境界線付近のクロマ遷移が滑らかになり、エンコーダに対して低周波成分として認識されやすくなる。
 
 ## ライセンス
 

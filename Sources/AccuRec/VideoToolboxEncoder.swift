@@ -18,6 +18,7 @@ import CoreMedia
 import CoreVideo
 import Foundation
 import os
+import VideoToolbox
 
 final class VideoToolboxEncoder: VideoEncoder {
     private let assetWriterSession: AssetWriterSession
@@ -52,6 +53,9 @@ final class VideoToolboxEncoder: VideoEncoder {
         ]
         if codec == .h264 {
             compressionProperties[AVVideoProfileLevelKey] = AVVideoProfileLevelH264HighAutoLevel
+        }
+        if codec == .hevc {
+            compressionProperties[kVTCompressionPropertyKey_ProfileLevel as String] = kVTProfileLevel_HEVC_Main10_AutoLevel
         }
 
         let videoSettings: [String: Any] = [

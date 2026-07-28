@@ -36,6 +36,7 @@ final class FFmpegEncoder: VideoEncoder {
     private var yuvFrame: UnsafeMutablePointer<AVFrame>?
     private var packet: UnsafeMutablePointer<AVPacket>?
     private let debug: Bool
+    private let isHEVC: Bool
     private var headerWritten = false
     private var frameCount = 0
     private var sessionStartPTS: CMTime = .invalid
@@ -155,7 +156,7 @@ final class FFmpegEncoder: VideoEncoder {
 
                 pkt.pointee.stream_index = Int32(1 + matchIndex)
                 av_packet_rescale_ts(pkt, inTS, outTS)
-                
+
                 av_interleaved_write_frame(outCtx, pkt)
             }
             av_packet_unref(pkt)
@@ -185,6 +186,7 @@ final class FFmpegEncoder: VideoEncoder {
         self.outputURL = outputURL
         self.audioURL = audioURL
         self.debug = debug
+        self.isHEVC = (codec == "libx265")
 
         let savedFd = debug ? -1 : swift_suppress_stderr()
         let ok = setupEncoder(codec: codec, crf: crf, preset: preset)
@@ -212,7 +214,7 @@ final class FFmpegEncoder: VideoEncoder {
 
         codecContext.pointee.width = width
         codecContext.pointee.height = height
-        codecContext.pointee.pix_fmt = AV_PIX_FMT_YUV420P
+        codecContext.pointee.pix_fmt = isHEVC ? AV_PIX_FMT_YUV420P10LE : AV_PIX_FMT_YUV420P
         codecContext.pointee.time_base = AVRational(num: 1, den: 1_000_000)
         codecContext.pointee.framerate = AVRational(num: 60, den: 1)
         codecContext.pointee.max_b_frames = 0
@@ -233,11 +235,11 @@ final class FFmpegEncoder: VideoEncoder {
         }
         if codec == "libx265" && !debug {
             av_opt_set(codecContext.pointee.priv_data, "tag", "hvc1", 0)
-            av_opt_set(codecContext.pointee.priv_data, "x265-params", "log-level=none:chroma-sample-loc=1", 0)
+            av_opt_set(codecContext.pointee.priv_data, "x265-params", "profile=main10:log-level=none:chroma-sample-loc=1", 0)
         }
         if codec == "libx265" && debug {
             av_opt_set(codecContext.pointee.priv_data, "tag", "hvc1", 0)
-            av_opt_set(codecContext.pointee.priv_data, "x265-params", "chroma-sample-loc=1", 0)
+            av_opt_set(codecContext.pointee.priv_data, "x265-params", "profile=main10:chroma-sample-loc=1", 0)
         }
 
         if formatContext.pointee.oformat.pointee.flags & AVFMT_GLOBALHEADER != 0 {
@@ -261,7 +263,7 @@ final class FFmpegEncoder: VideoEncoder {
 
         yuvFrame = av_frame_alloc()
         guard let yuvFrame else { return false }
-        yuvFrame.pointee.format = AV_PIX_FMT_YUV420P.rawValue
+        yuvFrame.pointee.format = (isHEVC ? AV_PIX_FMT_YUV420P10LE : AV_PIX_FMT_YUV420P).rawValue
         yuvFrame.pointee.width = width
         yuvFrame.pointee.height = height
         guard av_frame_get_buffer(yuvFrame, 0) >= 0 else {
@@ -269,13 +271,13 @@ final class FFmpegEncoder: VideoEncoder {
             return false
         }
 
-        let swsFlags = Int32(SWS_SPLINE.rawValue)
+        let swsFlags = Int32(SWS_LANCZOS.rawValue)
             | Int32(SWS_ACCURATE_RND.rawValue)
             | Int32(SWS_FULL_CHR_H_INT.rawValue)
             | Int32(SWS_FULL_CHR_H_INP.rawValue)
         swsContext = sws_getContext(
             width, height, AV_PIX_FMT_BGRA,
-            width, height, AV_PIX_FMT_YUV420P,
+            width, height, isHEVC ? AV_PIX_FMT_YUV420P10LE : AV_PIX_FMT_YUV420P,
             swsFlags, nil, nil, nil
         )
         guard let swsContext else {
@@ -334,7 +336,7 @@ final class FFmpegEncoder: VideoEncoder {
                     return
                 }
 
-                yuvFrame.pointee.format = AV_PIX_FMT_YUV420P.rawValue
+                yuvFrame.pointee.format = (self.isHEVC ? AV_PIX_FMT_YUV420P10LE : AV_PIX_FMT_YUV420P).rawValue
                 yuvFrame.pointee.width = width
                 yuvFrame.pointee.height = height
                 let makeWritableRet = av_frame_make_writable(yuvFrame)
